@@ -6,20 +6,20 @@ description: >-
 
 # NextITS pipeline usage examples
 
-## Quick Start
-
 ``` bash
 nextflow run vmikk/NextITS -r main \
   -profile singularity \
   -resume \
+  --step "Step1" \
   --input          "pacbio_ccs.fastq.gz" \
   --barcodes       "sample_barcodes.fasta" \
   --primer_forward "GTACACACCGCCCGTCG" \
   --primer_reverse "CCTSCSCTTANTDATATGC" \
   --its_region     "full" \
-  --blast_taxdb    "false" \
   --outdir         "Results"
 ```
+
+For more examples, see the dedicated [Quickstart section](quickstart.md).
 
 ## Input data
 
