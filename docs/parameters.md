@@ -43,13 +43,18 @@ For **pre-demultiplexed** data (prepared using external tools):
 
 ### Demultiplexing
 
-| Parameter            | Description                                                                                                       | Default Value    |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `--demultiplexed`    | Whether input is multiplexed (`false`, single FASTQ file) or pre-demultiplexed (`true`, multiple FASTQ files) ^1^ | `false`          |
-| `--lima_minscore`    | Barcode score for demultiplexing ^2^                                                                              | 93               |
-| `--lima_barcodetype` | Barcoding scheme type (`single`, `dual`, `dual_symmetric`, `dual_asymmetric`) ^3^                                 | `dual_symmetric` |
-| `--lima_W`           | Window size for barcode lookup                                                                                    | 70               |
-| `--lima_minlen`      | Minimum sequence length after clipping barcodes                                                                   | 40               |
+| Parameter                  | Description                                                                                                      | Default Value    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `--demultiplexed`         | Whether input is multiplexed (`false`, single FASTQ file) or pre-demultiplexed (`true`, multiple FASTQ files) ^1^ | `false`          |
+| `--lima_barcodetype`      | Barcoding scheme type (`single`, `dual`, `dual_symmetric`, `dual_asymmetric`) ^2^                                 | `dual_symmetric` |
+| `--lima_minscore`         | Barcode score for demultiplexing ^3^                                                                              | 93               |
+| `--lima_W`                | Window size for barcode lookup                                                                                    | 70               |
+| `--lima_minlen`           | Minimum sequence length after clipping barcodes                                                                   | 40               |
+| `--lima_minendscore`      | Score threshold for asymmetric barcoding schemes with different barcodes in a pair                                | 50               |
+| `--lima_minrefspan`       | Minimum read span relative to the barcode length                                                                  | 0.75             |
+| `--lima_minscoringregions`| Number of required barcodes for dual barcodes (2 = requires both barcodes)                                        | 2                |
+| `--lima_windowsize`       | Window size in base pairs                                                                                         | 70               |
+| `--lima_remove_unknown`   | Remove unknown barcode combinations in dual-barcoding modes                                                       | `false`          |
 
 ^1^:  
     By default, NextITS assumes you're providing multiplexed data, 
@@ -59,6 +64,13 @@ For **pre-demultiplexed** data (prepared using external tools):
     use the `--demultiplexed true` option.  
 
 ^2^:  
+    Barcodes, which can also be referred to as adaptors, tags, indices, molecular identifiers (MIDs), come in various library designs. 
+    At present, NextITS supports 4 barcoding schemes: dual-barcoding (symmetric, assymetric, or mixture of combinatorial tags) and single-barcoding. 
+    For the dual-barcoding scheme, the amplicon should have the barcode on both ends of the amplicon. 
+    An asymmetric design, where each side of the amplicon has a *different barcode pair*, is also supported.  
+    For a comprehensive understanding of barcode designs, please visit [https://lima.how/barcode-design.html](https://lima.how/barcode-design.html).  
+
+^3^:  
     For every barcode, [LIMA](https://lima.how/) evaluates a score corresponding to its region. 
     This score signifies the alignment accuracy between the chosen barcode and sequencing read, 
     and it's determined using the Smith-Waterman algorithm. 
@@ -66,13 +78,6 @@ For **pre-demultiplexed** data (prepared using external tools):
     a setting of `--min-score 80` should ensure over 99.99% precision.
     If you're working with shorter barcodes, such as 10 base pairs, consider reducing the minimum score for optimal results.  
     For a more comprehensive information, check out [https://lima.how/faq/barcode-score.html](https://lima.how/faq/barcode-score.html).  
-
-^3^:  
-    Barcodes, which can also be referred to as adaptors, tags, indices, molecular identifiers (MIDs), come in various library designs. 
-    At present, NextITS supports 4 barcoding schemes: dual-barcoding (symmetric, assymetric, or mixture of combinatorial tags) and single-barcoding. 
-    For the dual-barcoding scheme, the amplicon should have the barcode on both ends of the amplicon. 
-    An asymmetric design, where each side of the amplicon has a *different barcode pair*, is also supported.  
-    For a comprehensive understanding of barcode designs, please visit [https://lima.how/barcode-design.html](https://lima.how/barcode-design.html).  
 
 
 ### Quality filtering
