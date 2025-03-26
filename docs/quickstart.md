@@ -34,6 +34,7 @@ Sequencing run #1:
 nextflow run vmikk/NextITS -r main \
   -profile singularity \
   -resume \
+  --step "Step1" \
   --input          "$(pwd)/Run01/Run01.fastq.gz" \
   --barcodes       "$(pwd)/Run01/Run01_barcodes.fasta" \
   --primer_forward "GTACACACCGCCCGTCG" \
@@ -46,6 +47,7 @@ Sequencing run #2:
 nextflow run vmikk/NextITS -r main \
   -profile singularity \
   -resume \
+  --step "Step1" \
   --input          "$(pwd)/Run02/Run02.fastq.gz" \
   --barcodes       "$(pwd)/Run02/Run02_barcodes.fasta" \
   --primer_forward "GTACACACCGCCCGTCG" \
@@ -58,6 +60,7 @@ Sequencing run #3:
 nextflow run vmikk/NextITS -r main \
   -profile singularity \
   -resume \
+  --step "Step1" \
   --input          "$(pwd)/Run03/Run03.fastq.gz" \
   --barcodes       "$(pwd)/Run03/Run03_barcodes.fasta" \
   --primer_forward "GTACACACCGCCCGTCG" \
@@ -77,9 +80,9 @@ Then, we can use a greedy algorithm to cluster the sequences, setting a similari
 
 ``` bash
 nextflow run vmikk/NextITS -r main \
-  -main-script Step2_AggregateRuns.nf \
   -resume \
   -profile     singularity \
+  --step       "Step2" \
   --data_path  "$(pwd)/Step1_Results/" \
   --outdir     "Step2_Results" \
   --clustering_method "vsearch" \
@@ -124,11 +127,11 @@ cat > run_Step1.sh <<'EOT'
   nextflow run "$NEXTITS_PATH"/main.nf \
     -resume \
     -profile     docker \
+    --step       "Step1" \
     --input      "$BASEDIR"/Input/"$1"/*.fastq.gz \
     --barcodes   "$BASEDIR"/Input/"$1"/*.fasta \
     --outdir     "$BASEDIR"/Step1_Results/"$1" \
     -work-dir    "$BASEDIR"/Step1_WorkDirs/"$1" \
-    --tracedir   "$BASEDIR"/Step1_WorkDirs/"$1"/pipeline_info \
   | tee Nextflow_"$1".log
 
 EOT
