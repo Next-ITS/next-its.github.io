@@ -206,7 +206,7 @@ sudo singularity build NextITS.sif ./NextITS/containerfiles/main_container.def
 #### Download container from Docker Hub
 
 ``` bash
-docker pull vmikk/nextits
+docker pull vmikk/nextits:0.8.2
 ```
 
 #### Build custom image
