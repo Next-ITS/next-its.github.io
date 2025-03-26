@@ -45,7 +45,7 @@ Then, install Nextflow:
 ```bash
 wget -qO- https://get.nextflow.io | bash
 chmod +x ./nextflow
-mkdir -p ~/bin & mv ./nextflow ~/bin/
+mkdir -p ~/bin && mv ./nextflow ~/bin/
 ```
 
 ### Installation using `conda`
