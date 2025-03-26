@@ -192,7 +192,7 @@ nextflow run vmikk/nextits -r main -profile test
 #### Download container from the Singularity library
 
 ``` bash
-singularity pull --arch amd64 library://vmiks/nextits/nextits:0-0-5
+singularity pull --arch amd64 library://vmiks/nextits/nextits:0-8-2
 ```
 
 #### Build custom Singularity image
