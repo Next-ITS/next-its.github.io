@@ -24,7 +24,7 @@ coordinating and executing all command line tools seamlessly.
 
 ### Manual installation
 
-[`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=23.04.0`) 
+[`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=24.04.4`) 
 requires Java 11 (or later, up to 20) to be installed.
 
 To install Java, you may use your system's package manager.  
