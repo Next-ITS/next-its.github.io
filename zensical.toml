@@ -1,0 +1,60 @@
+[project]
+site_name = "NextITS"
+site_author = "Vladimir Mikryukov"
+site_description = "A pipeline for metabarcoding eukaryotes with full-length ITS sequenced with PacBio."
+copyright = "Copyright © 2026 Vladimir Mikryukov. All rights reserved."
+
+site_url = "https://Next-ITS.github.io/"
+repo_url = "https://github.com/vmikk/NextITS"
+
+nav = [
+  { "Introduction" = "index.md" },
+  { "Installation" = "installation.md" },
+  { "Quick start" = "quickstart.md" },
+  { "Usage instructions" = "usage.md" },
+  { "Parameters" = "parameters.md" },
+  { "Output description" = "output.md" },
+  { "Usage on HPC cluster" = "HPC.md" },
+]
+
+[project.theme]
+variant = "modern"
+favicon = "assets/NextITS_logo_square.png"
+logo = "assets/NextITS_logo.webp"
+font.text = "Ubuntu"
+font.code = "Ubuntu Mono"
+features = [
+  "content.code.copy",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "material/weather-sunny"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "material/weather-night"
+toggle.name = "Switch to light mode"
+
+[project.markdown_extensions]
+attr_list = {}
+md_in_html = {}
+footnotes = {}
+admonition = {}
+toc.permalink = true
+def_list = {}
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.critic = {}
+pymdownx.caret = {}
+pymdownx.keys = {}
+pymdownx.mark = {}
+pymdownx.tilde = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.inlinehilite = {}
+pymdownx.snippets = {}
+pymdownx.superfences = {}
