@@ -7,6 +7,11 @@ copyright = "Copyright © 2026 Vladimir Mikryukov. All rights reserved."
 site_url = "https://Next-ITS.github.io/"
 repo_url = "https://github.com/vmikk/NextITS"
 
+# CorelDRAW source files for figures (not published)
+exclude_docs = """
+*.cdr
+"""
+
 nav = [
   { "Introduction" = "index.md" },
   { "Installation" = "installation.md" },
