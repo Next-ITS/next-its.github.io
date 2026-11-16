@@ -165,3 +165,23 @@ Using an absolute path avoids surprises:
 If you don't need reference-based chimera detection, use `--chimera_methods denovo`
 (or `none`, which disables chimera detection completely).
 
+
+## Test the installation
+
+Run Step-1 on a small built-in dataset (replace `docker` with your engine):
+
+```bash
+nextflow run vmikk/NextITS -r main -profile test,docker
+```
+
+Results are written to `NextITS_Test_Step1/`. Other test profiles:
+
+| Profile | What it tests |
+| --- | --- |
+| `test` (or `test1`) | Step-1, PacBio, multiplexed |
+| `test2` | Step-2 (UNOISE + VSEARCH) |
+
+!!! tip "Pin a version"
+    `-r main` runs the latest code. For reproducible analyses, pin a release tag instead,
+    (`-r <version>`), and report it in your methods.
+    List the available tags with `git ls-remote --tags https://github.com/vmikk/NextITS`.
