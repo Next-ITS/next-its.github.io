@@ -137,3 +137,31 @@ export NXF_APPTAINER_CACHEDIR="/shared/path/apptainer_cache"       # -profile ap
     singularity build --fakeroot nextits.sif NextITS.def
     ```
 
+## Databases
+
+### Chimera database
+
+Reference-based chimera detection (enabled by default) needs a database in VSEARCH's UDB format.
+We provide one built from [EUKARYOME](https://eukaryome.org/) v1.9.3:
+full-length ITS sequences of 100–800 bp, extracted with ITSx.
+
+[Download the database](https://owncloud.ut.ee/owncloud/s/PkasGDNDimNssm3){ .md-button }
+
+From the command line:
+
+```bash
+wget -O Eukaryome_1.9.3_241222_FullITS_100-800.udb \
+  "https://owncloud.ut.ee/owncloud/public.php/dav/files/PkasGDNDimNssm3"
+```
+
+Pass the path to the file with `--chimera_db`. The default value is a bare file name,
+`Eukaryome_1.9.3_241222_FullITS_100-800.udb`, which Nextflow looks for in the directory you launch the pipeline from.
+Using an absolute path avoids surprises:
+
+```bash
+--chimera_db "/path/to/Eukaryome_1.9.3_241222_FullITS_100-800.udb"
+```
+
+If you don't need reference-based chimera detection, use `--chimera_methods denovo`
+(or `none`, which disables chimera detection completely).
+
