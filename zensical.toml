@@ -1,7 +1,7 @@
 [project]
 site_name = "NextITS"
 site_author = "Vladimir Mikryukov"
-site_description = "A pipeline for metabarcoding eukaryotes with full-length ITS sequenced with PacBio."
+site_description = "A Nextflow pipeline for metabarcoding fungi and other eukaryotes with full-length ITS (PacBio) and short-read (Illumina) data."
 copyright = "Copyright © 2026 Vladimir Mikryukov. All rights reserved."
 
 site_url = "https://Next-ITS.github.io/"
@@ -55,35 +55,56 @@ features = [
   "toc.follow",
 ]
 
+# Palette: follow system preference, with manual light/dark toggle
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
 
 [[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
 scheme = "default"
 primary = "indigo"
 accent = "indigo"
-toggle.icon = "material/weather-sunny"
+toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 primary = "indigo"
 accent = "indigo"
-toggle.icon = "material/weather-night"
-toggle.name = "Switch to light mode"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+
+[project.plugins.glightbox]
+auto_caption = false
 
 [project.markdown_extensions]
-attr_list = {}
-md_in_html = {}
-footnotes = {}
+abbr = {}
 admonition = {}
-toc.permalink = true
+attr_list = {}
 def_list = {}
-pymdownx.tasklist.custom_checkbox = true
-pymdownx.critic = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
 pymdownx.caret = {}
+pymdownx.details = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
 pymdownx.keys = {}
 pymdownx.mark = {}
-pymdownx.tilde = {}
-pymdownx.highlight.anchor_linenums = true
-pymdownx.inlinehilite = {}
 pymdownx.snippets = {}
-pymdownx.superfences = {}
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.tilde = {}
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
