@@ -13,13 +13,20 @@ exclude_docs = """
 """
 
 nav = [
-  { "Introduction" = "index.md" },
-  { "Installation" = "installation.md" },
-  { "Quick start" = "quickstart.md" },
-  { "Usage instructions" = "usage.md" },
-  { "Parameters" = "parameters.md" },
-  { "Output description" = "output.md" },
-  { "Usage on HPC cluster" = "HPC.md" },
+  { "Home" = "index.md" },
+  { "Getting started" = [
+    { "Installation" = "installation.md" },
+    { "Quick start" = "quickstart.md" },
+  ] },
+  { "User guide" = [
+    { "Running the pipeline" = "usage.md" },
+    { "Output files" = "output.md" },
+    { "Running on HPC" = "HPC.md" },
+  ] },
+  { "Reference" = [
+    { "Parameters" = "parameters.md" },
+    { "Changelog" = "https://github.com/vmikk/NextITS/blob/main/CHANGELOG.md" },
+  ] },
 ]
 
 [project.theme]
