@@ -1,150 +1,96 @@
 ---
 title: Quick start
 description: >-
-    Quick and easy NextITS instruction for impatient people
+    Run NextITS on your own PacBio data in two commands.
 ---
 
-# Quick start  
+# Quick start
 
-Get started quickly with NextITS by following these simple instructions.  
+This page assumes you have [installed](installation.md) Nextflow and a container engine,
+and downloaded the [chimera database](installation.md#databases).
+The examples use Docker; swap `-profile docker` for `singularity`, `apptainer` or `podman` as needed.
 
-The pipeline is divided into two main steps:  
-1. The first step is executed separately for each sequencing run because it involves the removal of tag-jumps. This step primarily focuses on sequence quality control, ITS extraction, and chimera removal.  
-2. The second step combines data from various runs, clusters sequences using either vsearch or swarm, and then performs post-clustering curation.  
+NextITS runs in two steps:
 
-##  Pull the latest pipeline version
+1. **Step-1** processes each sequencing run separately: QC, demultiplexing, ITS extraction, chimera detection and tag-jump removal.
+2. **Step-2** pools the Step-1 results of all runs and clusters the sequences into OTUs.
 
-``` bash
-nextflow pull vmikk/NextITS
-```
+## Step-1: process a sequencing run
 
+For a multiplexed PacBio run you need a FASTQ (or BAM) file, a FASTA file with sample barcodes,
+and the primer sequences:
 
-## Step 1
-
-As a first step, each sequencing run must be processed individually.  
-
-!!! info "DRY principle"
-    For clarity, we're providing separate commands below. 
-    Note, however, that this approach doesn't adhere to the DRY (Don't Repeat Yourself) principle and may lead to errors. 
-    To minimize potential errors, you can encapsulate the command within a script or function (for details, see below).
-
-
-Sequencing run #1:  
-``` bash
+```bash
 nextflow run vmikk/NextITS -r main \
-  -profile singularity \
+  -profile docker \
   -resume \
-  --step "Step1" \
-  --input          "$(pwd)/Run01/Run01.fastq.gz" \
-  --barcodes       "$(pwd)/Run01/Run01_barcodes.fasta" \
-  --primer_forward "GTACACACCGCCCGTCG" \
+  --step           Step1 \
+  --input          "$(pwd)/Input/Run01/Run01.fastq.gz" \
+  --barcodes       "$(pwd)/Input/Run01/Run01_barcodes.fasta" \
+  --primer_forward "TACACACCGCCCGTCG" \
   --primer_reverse "CCTSCSCTTANTDATATGC" \
+  --chimera_db     "/path/to/Eukaryome_1.9.3_241222_FullITS_100-800.udb" \
   --outdir         "Step1_Results/Run01"
 ```
 
-Sequencing run #2:  
-``` bash
+Check your barcode file format and primer orientation in [Running the pipeline](usage.md#input-data) before the first run.
+To process several runs, repeat the command for each one with its own `--input`, `--barcodes` and `--outdir`.
+See [Processing many runs](#processing-many-runs) below for a script that does this.
+
+!!! tip "Check the data first"
+    `--step seqstats` takes the same input options. It runs only QC, demultiplexing and the primer check,
+    and writes a short HTML report. It gives you a quick look at a new run before the full analysis.
+
+## Step-2: pool runs and cluster
+
+Point `--data_path` to the folder with all Step-1 results:
+
+```bash
 nextflow run vmikk/NextITS -r main \
-  -profile singularity \
+  -profile docker \
   -resume \
-  --step "Step1" \
-  --input          "$(pwd)/Run02/Run02.fastq.gz" \
-  --barcodes       "$(pwd)/Run02/Run02_barcodes.fasta" \
-  --primer_forward "GTACACACCGCCCGTCG" \
-  --primer_reverse "CCTSCSCTTANTDATATGC" \
-  --outdir         "Step1_Results/Run02"
+  --step       Step2 \
+  --data_path  "$(pwd)/Step1_Results" \
+  --clustering vsearch \
+  --otu_id     0.98 \
+  --outdir     "Step2_Results"
 ```
 
-Sequencing run #3:  
-``` bash
-nextflow run vmikk/NextITS -r main \
-  -profile singularity \
-  -resume \
-  --step "Step1" \
-  --input          "$(pwd)/Run03/Run03.fastq.gz" \
-  --barcodes       "$(pwd)/Run03/Run03_barcodes.fasta" \
-  --primer_forward "GTACACACCGCCCGTCG" \
-  --primer_reverse "CCTSCSCTTANTDATATGC" \
-  --outdir         "Step1_Results/Run03"
-```
+This clusters sequences at 98% similarity with VSEARCH, then curates the OTU table with LULU.
+The final tables are in `Step2_Results/05.LULU/`; see [Output files](output.md) for the full output.
 
-!!! info "Container engines"
-    In the provided examples, we've assumed that you're utilizing **Singularity** as your container engine.  
-    However, if you prefer to use **Docker**, it's a straightforward switch. 
-    Simply modify the setting from `-profile singularity` to `-profile docker` in the command.  
+Other clustering strategies only change the last few options:
 
-## Step 2
+=== "SWARM"
 
-Step-2 combines the results from Step-1.  
-Then, we can use a greedy algorithm to cluster the sequences, setting a similarity threshold of 98%.  
+    Single-linkage clustering with a local threshold, instead of a global one:
 
-``` bash
-nextflow run vmikk/NextITS -r main \
-  -resume \
-  -profile     singularity \
-  --step       "Step2" \
-  --data_path  "$(pwd)/Step1_Results/" \
-  --outdir     "Step2_Results" \
-  --clustering_method "vsearch" \
-  --otu_id 0.98
-```
+    ```bash
+    --clustering swarm --swarm_d 1
+    ```
 
-!!! info "The other options"
-    Instead of using greedy clustering, you can opt for SWARM clustering, 
-    which employs a dynamic sequence similarity threshold 
-    that aligns with the natural limits of OTUs.  
-    Additionally, before clustering or as an alternative to it, 
-    you can denoise the data using the UNOISE algorithm.  
-    For more details, see the `Usage instructions`.
+=== "UNOISE + VSEARCH"
 
+    Denoise first, then cluster the denoised sequences:
 
-## Wrapping a command into a script
+    ```bash
+    --preclustering unoise --clustering vsearch --otu_id 0.98
+    ```
 
-To follow the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself), 
-it is possible to wrap Step-1 commands into a simple script.
+=== "DADA2 (ASVs only)"
 
-``` bash
-## Create the script
-cat > run_Step1.sh <<'EOT'
-#!/bin/bash
+    Exact sequence variants without OTU clustering:
 
-  ## Positional arguments to the script:
-  # $1 = name of the directory containing FASTQ files
+    ```bash
+    --preclustering dada2 --clustering none
+    ```
 
-  echo -e "\n"
-  echo -e "Input data: " $1
-  echo -e "Output: " Step1_Results/"$1"
-  echo -e "Temporary workdirs: " Step1_WorkDirs/"$1"
+See [Denoising and clustering](usage.md#denoising-and-clustering) for how to choose.
 
-  BASEDIR=$(pwd)
+## Processing many runs
 
-  ## Create output directories
-  mkdir -p Step1_Results/"$1"
-  mkdir -p Step1_WorkDirs/"$1"
-  cd Step1_WorkDirs/"$1"
-
-  ## Run Step-1 of the pipeline
-  nextflow run "$NEXTITS_PATH"/main.nf \
-    -resume \
-    -profile     docker \
-    --step       "Step1" \
-    --input      "$BASEDIR"/Input/"$1"/*.fastq.gz \
-    --barcodes   "$BASEDIR"/Input/"$1"/*.fasta \
-    --outdir     "$BASEDIR"/Step1_Results/"$1" \
-    -work-dir    "$BASEDIR"/Step1_WorkDirs/"$1" \
-  | tee Nextflow_"$1".log
-
-EOT
-
-## Make the script executable
-chmod +x run_Step1.sh
-```
-
-The script assumes that the data is structured such that 
-the `Input` directory houses multiple sub-directories corresponding to different sequencing runs 
-(e.g., `Run01`, `Run02`, `Run03`), and within each of these sub-directories, 
-there two files: a `FASTQ` file containing high-throughput data and a `FASTA` file with barcodes.  
-For example:  
+If your data are organised with one sub-directory per sequencing run,
+each holding one FASTQ file and one barcode file:
 
 ```
 Input/
@@ -155,33 +101,59 @@ Input/
 │   ├── Run02.fastq.gz
 │   └── Run02_barcodes.fasta
 └── Run03/
-    ├── Run03.fastq.gz
-    └── Run03_barcodes.fasta
+    ├── ...
 ```
 
-To initiate the analysis for individual sequencing runs, execute the following commands:  
-``` bash
-./run_Step1.sh "Run01"
-./run_Step1.sh "Run02"
-./run_Step1.sh "Run03"
+then a small script can run Step-1 for each run.
+Each run is launched from its own directory (`Step1_WorkDirs/<RunID>`), which holds that run's Nextflow cache and work files.
+This keeps `-resume` working per run and lets several runs execute in parallel.
+
+```bash title="run_step1.sh"
+#!/bin/bash
+# Usage: ./run_step1.sh <RunID>
+set -euo pipefail
+
+RUN="$1"
+BASEDIR="$(pwd)"
+
+mkdir -p "$BASEDIR"/Step1_WorkDirs/"$RUN"
+cd "$BASEDIR"/Step1_WorkDirs/"$RUN"
+
+nextflow run vmikk/NextITS -r main \
+  -profile docker \
+  -resume \
+  --step           Step1 \
+  --input          "$BASEDIR"/Input/"$RUN"/*.fastq.gz \
+  --barcodes       "$BASEDIR"/Input/"$RUN"/*.fasta \
+  --primer_forward "TACACACCGCCCGTCG" \
+  --primer_reverse "CCTSCSCTTANTDATATGC" \
+  --chimera_db     "/path/to/Eukaryome_1.9.3_241222_FullITS_100-800.udb" \
+  --outdir         "$BASEDIR"/Step1_Results/"$RUN" \
+  | tee "$BASEDIR"/Nextflow_"$RUN".log
 ```
 
-If you have a large number of sequencing runs, 
-you can automate the process by combining the `find` and 
-[GNU `parallel`](https://www.gnu.org/software/parallel/) 
-utilities:  
-``` bash
-find $(pwd)/Input/ -type d -not -path $(pwd)/Input/ \
-  | sort \
-  | parallel -j1 "./run_Step1.sh {/}"
+Run it for each sub-directory of `Input/`:
+
+```bash
+chmod +x run_step1.sh
+
+for run in Input/*/; do
+  ./run_step1.sh "$(basename "$run")"
+done
 ```
-This command will locate all sub-directories within the `Input` directory and run the analysis script for each one.
 
-## Configuring the pipeline
+With [GNU parallel](https://www.gnu.org/software/parallel/) you can run several at once.
+Each Nextflow run already uses all available CPUs, so keep `-j` small:
 
-While we have endeavored to choose the most sensible default options for the NextITS pipeline, 
-it's worth noting that there are numerous parameters available for configuration and fine-tuning, 
-allowing users to adapt the pipeline to best fit their data.  
+```bash
+ls Input/ | parallel -j 2 ./run_step1.sh {}
+```
 
-Detailed descriptions of these parameters can be found in the [`Parameters`](parameters.md) section of the documentation.
+Once a run has finished and you have checked its results, you can delete its `Step1_WorkDirs/<RunID>` folder.
+Before you do, read the note on [storage mode](usage.md#where-results-are-stored).
 
+## Next steps
+
+- [Running the pipeline](usage.md): input formats, barcodes, primers and the choice of clustering method.
+- [Parameters](parameters.md): every option with its default.
+- [Running on HPC](HPC.md): Slurm and other schedulers.
