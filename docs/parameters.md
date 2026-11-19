@@ -1,399 +1,332 @@
 ---
 title: Parameters
 description: >-
-    Pipeline parameters and configuration.
+    All NextITS parameters with their default values.
 ---
 
 # Parameters
 
-The NextITS pipeline is made up of multiple connected processes. 
-Each of these processes is amenable to configuration, 
-empowering users to tailor not just the process parameters 
-but also the resources allocated for each one (e.g., the number of CPUs). 
-When setting the pipeline parameter values, users have two choices: 
-they can specify them directly from the command line using double dash arguments (for example, `--its_region "full"`) 
-or opt for a simple parameters file. Utilizing a parameters file is especially advantageous 
-when dealing with numerous settings, as it offers a cleaner command line interface. 
-In addition to this, individual processes within the pipeline can be fine-tuned using a dedicated config file.  
+Set parameters on the command line with two dashes (`--its_region full`) or collect them in a
+[parameter file](usage.md#parameter-files) passed with `-params-file`.
+To print the description of a parameter from the pipeline itself, use `--help <parameter>`.
 
-NextITS boasts a vast array of configurable parameters. 
-For ease of navigation and understanding, these parameters have been grouped into several categories, 
-detailed in the sections that follow.  
+Each section below follows the order of the pipeline. A dash (–) in the Default column means the parameter is not set by default.
+
+## General
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--step` | `Step1` | Part of the pipeline to run: `Step1`, `Step2` or `seqstats` |
+| `--outdir` | `results` | Output directory |
+| `--tracedir` | `<outdir>/pipeline_info` | Directory for execution reports |
+| `--storagemode` | `rellink` | How results are placed in `--outdir` ^1^ |
+| `--gzip_compression` | `7` | GZIP compression level of output files, `1` (fastest) to `9` (smallest) |
+| `--max_cpus` | `80` | Upper limit of CPUs for a single task ^2^ |
+| `--max_memory` | `132.GB` | Upper limit of memory for a single task ^2^ |
+| `--max_time` | `240.h` | Upper limit of run time for a single task ^2^ |
+| `--validate_params` | `true` | Check parameter values before the run starts |
+| `--monochrome_logs` | `false` | Disable coloured terminal output |
+| `--help` | – | Show help; `--help <parameter>` shows help for one parameter |
+| `--helpFull` | `false` | Show help for all parameters |
+| `--showHidden` | `false` | Include hidden parameters in the help |
+| `--helpMsg` | `false` | Show the older plain-text help message |
+| `--version` | `false` | Print the pipeline version and exit |
+
+^1^: `rellink` creates relative links into the work directory, `symlink` absolute links, `link` hard links;
+`copy` copies files and `move` moves them (`move` breaks `-resume`). With any link mode, results depend on the work directory;
+see [Where results are stored](usage.md#where-results-are-stored).
+
+^2^: Used by the `hpc_utslurm` profile to cap per-task resources. In your own configs, use Nextflow's
+[`process.resourceLimits`](https://www.nextflow.io/docs/latest/reference/process.html#resourcelimits) instead (see [Running on HPC](HPC.md)).
 
 ## Step-1
 
-### Required parameters
+### Input
 
-| Parameter    | Description                                                                                                            |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `--input`    | Path to the input file containing single-end sequences (in FASTQ format) or the directory with pre-demultiplexed files |
-| `--barcodes` | Path to the file with barcodes (in FASTA format) used for demultiplexing the input data                                |
-| `--outdir`   | Path to the directory where the analysis results will be saved.                                                        |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--input` | – | Multiplexed reads as one FASTQ or BAM file, or a folder of per-sample FASTQ files (with `--demultiplexed true`) |
+| `--barcodes` | – | FASTA file with sample barcodes. Required for multiplexed input. |
+| `--demultiplexed` | `false` | Set to `true` if `--input` is a folder of per-sample files |
+| `--seqplatform` | `PacBio` | Sequencing platform: `PacBio` or `Illumina` |
 
-The pipeline can handle both multiplexed and demultiplexed data inputs:  
-
-For **multiplexed** data:  
-- Use the `--input` parameter to specify a single FASTQ file (e.g., `Run01.fastq.gz`);  
-- You must also provide the `--barcodes` parameter, which should reference a FASTA file. The sequence names in this file should correspond to the sample names.  
-
-For **pre-demultiplexed** data (prepared using external tools):  
-- The `--input` parameter should direct to a directory containing individual FASTQ files for each sample;  
-- There's no need to provide a barcodes file in this case;  
-- Demultiplexed parameter should be enabled (`--demultiplexed true`).  
-
-### Demultiplexing
-
-| Parameter                  | Description                                                                                                      | Default Value    |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `--demultiplexed`         | Whether input is multiplexed (`false`, single FASTQ file) or pre-demultiplexed (`true`, multiple FASTQ files) ^1^ | `false`          |
-| `--lima_barcodetype`      | Barcoding scheme type (`single`, `dual`, `dual_symmetric`, `dual_asymmetric`) ^2^                                 | `dual_symmetric` |
-| `--lima_minscore`         | Barcode score for demultiplexing ^3^                                                                              | 93               |
-| `--lima_W`                | Window size for barcode lookup                                                                                    | 70               |
-| `--lima_minlen`           | Minimum sequence length after clipping barcodes                                                                   | 40               |
-| `--lima_minendscore`      | Score threshold for asymmetric barcoding schemes with different barcodes in a pair                                | 50               |
-| `--lima_minrefspan`       | Minimum read span relative to the barcode length                                                                  | 0.75             |
-| `--lima_minscoringregions`| Number of required barcodes for dual barcodes (2 = requires both barcodes)                                        | 2                |
-| `--lima_windowsize`       | Window size in base pairs                                                                                         | 70               |
-| `--lima_remove_unknown`   | Remove unknown barcode combinations in dual-barcoding modes                                                       | `false`          |
-
-^1^:  
-    By default, NextITS assumes you're providing multiplexed data, 
-    which means a single FASTQ file accompanied by a FASTA file containing barcodes.  
-    If your data is already separated into individual samples 
-    (meaning you have multiple FASTQ files, potentially more than one for each sample), 
-    use the `--demultiplexed true` option.  
-
-^2^:  
-    Barcodes, which can also be referred to as adaptors, tags, indices, molecular identifiers (MIDs), come in various library designs. 
-    At present, NextITS supports 4 barcoding schemes: dual-barcoding (symmetric, assymetric, or mixture of combinatorial tags) and single-barcoding. 
-    For the dual-barcoding scheme, the amplicon should have the barcode on both ends of the amplicon. 
-    An asymmetric design, where each side of the amplicon has a *different barcode pair*, is also supported.  
-    For a comprehensive understanding of barcode designs, please visit [https://lima.how/barcode-design.html](https://lima.how/barcode-design.html).  
-
-^3^:  
-    For every barcode, [LIMA](https://lima.how/) evaluates a score corresponding to its region. 
-    This score signifies the alignment accuracy between the chosen barcode and sequencing read, 
-    and it's determined using the Smith-Waterman algorithm. 
-    For the HiFi data, adjust the score based on your tolerance for contamination:  
-    a setting of `--min-score 80` should ensure over 99.99% precision.
-    If you're working with shorter barcodes, such as 10 base pairs, consider reducing the minimum score for optimal results.  
-    For a more comprehensive information, check out [https://lima.how/faq/barcode-score.html](https://lima.how/faq/barcode-score.html).  
-
+See [Input data](usage.md#input-data) for formats and naming rules.
 
 ### Quality filtering
 
-| Parameter                | Description                                                                          | Default Value |
-| ------------------------ | ------------------------------------------------------------------------------------ | ------------- |
-| `--qc_maxee`             | Maximum number of expected errors ^1^                                                | -             |
-| `--qc_maxeerate`         | Maximum number of expected errors per base                                           | 0.01          |
-| `--qc_maxhomopolymerlen` | Threshold for a homopolymer region length in a sequence ^2^                          | 25            |
-| `--qc_maxn`              | Discard sequences with more than the specified number of ambiguous nucleotides (N's) | 4             |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--qc_maxee` | – | Maximum number of expected errors per read |
+| `--qc_maxeerate` | `0.01` | Maximum expected errors per base |
+| `--qc_maxhomopolymerlen` | `25` | Remove reads with a homopolymer of this length or longer |
+| `--qc_maxn` | `4` | Maximum number of ambiguous bases (`N`) per read |
 
-^1^:  
-    As part of the sequence quality control, it is possible to evaluates sequences based on the 
-    maximum number of expected errors (MaxEE) predicted by Phred scores 
-    ([Edgar & Flyvbjerg 2015 DOI:`10.1093/bioinformatics/btv401`](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) 
-    and the maximum number of expected errors per base. 
+Expected errors are computed from Phred scores ([Edgar & Flyvbjerg 2015](https://doi.org/10.1093/bioinformatics/btv401)).
+The homopolymer filter targets technical artefacts only:
+real fungal ITS often contains homopolymers longer than 10 bases ([Tedersoo et al. 2022](https://doi.org/10.1111/mec.16460)).
 
-^2^:  
-    The ITS region of many fungal and other eukaryotic taxa could commonly harbour homopolymers exceeding 10 bases 
-    ([Tedersoo et al. 2022 DOI:`10.1111/mec.16460`](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.16460)).  
+### Demultiplexing (PacBio)
 
+Demultiplexing of PacBio reads is done with [lima](https://lima.how/).
 
-### Removal of multiprimer-artifacts and reorienting of reads
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--lima_barcodetype` | `dual_symmetric` | Barcoding scheme: `dual_symmetric`, `dual_asymmetric`, `dual` (mixed) or `single` |
+| `--lima_minscore` | `93` | Minimum barcode score (0–100) ^1^ |
+| `--lima_minendscore` | `50` | Minimum score of the second barcode (asymmetric and mixed schemes) |
+| `--lima_minrefspan` | `0.75` | Minimum fraction of the barcode covered by the read |
+| `--lima_minscoringregions` | `2` | Number of barcodes that must be found in dual schemes (`2` = both) |
+| `--lima_windowsize` | `70` | Window at the read ends to search for barcodes, bp |
+| `--lima_minlen` | `40` | Minimum read length after barcode removal |
+| `--lima_remove_unknown` | `false` | Discard reads with barcode combinations not listed in `--barcodes`. If `false`, they are kept as separate samples named after the barcodes. |
 
-| Parameter             | Description                                | Default Value       |
-| --------------------- | ------------------------------------------ | ------------------- |
-| `--primer_forward`    | Sequence of the forward primer ^1^         | TACACACCGCCCGTCG    |
-| `--primer_reverse`    | Sequence of the reverse primer ^1^         | CCTSCSCTTANTDATATGC |
-| `--primer_mismatches` | Allowed number of mismatches for primers   | 2                   |
-| `--primer_foverlap`   | Minimum overlap for the forward primer ^2^ | F primer length - 2 |
-| `--primer_roverlap`   | Minimum overlap for the reverse primer ^2^ | R primer length - 2 |
+^1^: The score measures how well a barcode aligns to the read. The default suits 12-bp barcodes;
+lower it for shorter barcodes. See the [lima FAQ on barcode scores](https://lima.how/faq/barcode-score.html).
 
-**Default Primers:**  
-By default, NextITS is configured for the data obtained with universal eukaryote primers:  
-- **Forward Primer:** `ITS9MUNngs` with sequence `TACACACCGCCCGTCG`  
-- **Reverse Primer:** `ITS4ngsUni` with sequence `CCTSCSCTTANTDATATGC`  
-Refer to [Tedersoo & Lindahl, 2016 DOI:`10.1111/1758-2229.12438`](https://ami-journals.onlinelibrary.wiley.com/doi/10.1111/1758-2229.12438) for more details on these primers.  
+### Illumina paired-end (experimental)
 
-**Alternative Forward Primer:**  
-For specific applications, we also recommend the `ITS1catta` forward primer (sequence: `ACCWGCGGARGGATCATTA`). 
-It's designed to target and exclude plant sequences while avoiding interference from the SSU 3′-end intron.  
-For additional information on this primer, consult [Tedersoo & Anslan, 2019 DOI:`10.1111/1758-2229.12776`](https://ami-journals.onlinelibrary.wiley.com/doi/10.1111/1758-2229.12776).  
+!!! warning "Experimental"
+    These parameters apply with `--seqplatform Illumina` and may change between releases.
+    The `-profile miseq` and `-profile novaseq` presets set suitable QC and merging values.
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--input_R1` | – | Multiplexed R1 reads (FASTQ.gz) |
+| `--input_R2` | – | Multiplexed R2 reads (FASTQ.gz) |
+| `--illumina_pe_pattern` | `*_R{1,2}*.{fastq,fq}.gz` | File pattern of per-sample read pairs in the `--input` folder (with `--demultiplexed true`) |
+| `--illumina_barcodetype` | `dual_symmetric` | Tag layout: `dual_symmetric` (same tag on both reads), `dual_asymmetric` (different tags, `FWD...REV` format) or `single` |
+| `--illumina_revtag_orient` | `auto` | Orientation of the reverse tag in the barcode file: `auto` (detected from the data), `forward` or `revcomp` |
+| `--illumina_demux_rescue` | `false` | Rescue read pairs where only one tag can be read (only for tags used by a single sample) |
+| `--barcode_window` | `30` | Search window for tags at the 5′ end of reads (`0` = tag must start the read) |
+| `--barcode_errors` | `2` | Maximum mismatches in a tag |
+| `--barcode_overlap` | `11` | Minimum overlap between read and tag |
+| `--barcode_minlen` | `50` | Minimum read length after tag removal |
+| `--pe_merger` | `usearch` | Tool for merging read pairs: `usearch` or `vsearch`. Use `vsearch` with the `vmikk/nextits:1.2.4` image, which does not include USEARCH. |
+| `--pe_maxdiffs` | `10` | Maximum mismatches in the overlap |
+| `--pe_pctid` | `80` | Minimum percent identity in the overlap |
+| `--pe_minoverlap` | `16` | Minimum overlap length |
+| `--pe_minlen` | `50` | Minimum length of a merged read |
+| `--pe_maxlen` | – | Maximum length of a merged read |
+| `--qc_polyglen` | `10` | Trim 3′ poly-G tails at least this long before merging (two-colour chemistry); `0` = no trimming |
+| `--qc_binned` | – | Expected quality score type (binned or not). Set by the presets; used only to warn about a mismatch with the data. |
+| `--illumina_keep_notmerged` | `false` | Join read pairs that can't be merged, with an `N` spacer. Requires `--its_region none` and `--hp false`. |
+| `--illumina_joinpadgap` | `NNNNNNNNNN` | Spacer sequence for joined pairs |
+| `--illumina_joinpadqual` | `IIIIIIIIII` | Quality string of the spacer |
+| `--trim_minlen` | `10` | Minimum sequence length after primer trimming (applies to all platforms) |
+
+### Primers
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--primer_forward` | `TACACACCGCCCGTCG` | Forward primer, 5′ → 3′ (ITS9mun) |
+| `--primer_reverse` | `CCTSCSCTTANTDATATGC` | Reverse primer, 5′ → 3′ (ITS4ngsUni) |
+| `--primer_mismatches` | `2` | Maximum mismatches in a primer |
+| `--primer_foverlap` | primer length − 2 | Minimum overlap with the forward primer |
+| `--primer_roverlap` | primer length − 2 | Minimum overlap with the reverse primer |
+
+See [Primers](usage.md#primers) for orientation rules and alternative primers.
 
 ### ITS extraction
 
-| Parameter        | Description                                                                     | Default Value |
-| ---------------- | ------------------------------------------------------------------------------- | ------------- |
-| `--its_region`   | ITS part selector ^2^                                                           | "full"        |
-| `--ITSx_tax`     | Taxonomy profile for ITSx ^1^                                                   | "all"         |
-| `--ITSx_evalue`  | E-value cutoff threshold for ITSx                                               | 1e-1          |
-| `--ITSx_partial` | Keep partial ITS sequences (specify a minimum length cutoff), default = off (0) | 0             |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--its_region` | `full` | Region to extract: `full`, `ITS1`, `ITS2`, `ITS1_5.8S_ITS2`, `SSU`, `LSU` or `none` |
+| `--itsx_tool` | `ITSx` | Extraction tool: `ITSx` (v1.x, HMMER) or `ITSx2` (Infernal; faster, covers all eukaryotes) |
+| `--ITSx_tax` | `all` | Taxonomic profiles to use (ITSx 1.x only) ^1^ |
+| `--ITSx_evalue` | `0.1` | E-value cutoff (ITSx 1.x only) |
+| `--ITSx_partial` | `0` | Keep partial sequences at least this long; `0` = off (ITSx 1.x only) |
+| `--ITSx_complement` | `F` | Search both strands (`T`) or only the forward strand (`F`) (ITSx 1.x only) ^2^ |
+| `--ITSx_heuristics` | `false` | Use HMM filtering heuristics (ITSx 1.x only) |
+| `--ITSx_chunk_size` | `9999` | Unique sequences per extraction task; `0` = one task per sample |
+| `--ITSx_to_parquet` | `true` | Collect the extracted regions of all samples into `03_ITSx_PooledParts/rRNA_parts.parquet`. Needed for `--rrna_parts` in Step-2. |
 
-When performing ITS metabarcoding, it's essential to trim the flanking 18S and 28S rRNA genes. 
-This is crucial because:  
-- These conserved regions don't offer species-level differentiation.  
-- Random errors in these areas can disrupt sequence clustering.  
-- Chimeric breakpoints, which are common in these regions, are hard to detect in short fragments ranging from 10 to 70 bases.  
-(For details, see [Lindahl et al. 2013 DOI:`10.1111/nph.12243`](https://nph.onlinelibrary.wiley.com/doi/10.1111/nph.12243) and
- [Tedersoo et al. 2022 DOI:`10.1111/mec.16460`](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.16460)).  
+The conserved SSU and LSU flanks don't separate species, so random errors in them inflate the number of OTUs.
+They are also where chimera breakpoints are hard to detect
+([Lindahl et al. 2013](https://doi.org/10.1111/nph.12243), [Tedersoo et al. 2022](https://doi.org/10.1111/mec.16460)).
+NextITS therefore extracts the ITS with ITSx ([Bengtsson-Palme et al. 2013](https://doi.org/10.1111/2041-210X.12073)) before clustering.
 
-To address this, NextITS employs the ITSx program ([Bengtsson-Palme et al., 2013 DOI:`10.1111/2041-210X.12073`](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12073)).  
-By using the `--its_region` parameter, users can select the region for subsequent analyses.  
-Supported options include:  
-- **full**: Represents the full-length ITS  
-- **ITS1_5.8S_ITS2**: A near-full-length ITS that assembles the sequence from the `ITS1`, `5.8S`, and `ITS2` segments extracted by ITSx.  
-  This option is particularly handy when ITSx struggles to detect the end of the SSU. 
-  (for instance, when using the `ITS1catta` primer, which is located at the extreme end of the SSU and is not detected by ITSx).  
-- **ITS1**: Represents the ITS1 region  
-- **ITS2**: Represents the ITS2 region  
-- **SSU**: Focuses on the small subunit of rRNA (18S)  
-- **LSU**: Focuses on the large subunit of rRNA (28S)  
-- **none**: This option only trims primers without extracting the ITS  
+| `--its_region` | Result |
+| --- | --- |
+| `full` | Full-length ITS (ITS1–5.8S–ITS2) as detected by ITSx |
+| `ITS1_5.8S_ITS2` | Full ITS assembled from the separately detected ITS1, 5.8S and ITS2. Use it when ITSx can't find the SSU end, e.g. with the ITS1catta primer. |
+| `ITS1`, `ITS2` | One spacer only |
+| `SSU`, `LSU` | The flanking 18S or 28S fragment |
+| `none` | No extraction; primers are trimmed only |
 
+^1^: A comma-separated list (no spaces) of lowercase group names, or `all` (e.g., `--ITSx_tax fungi` or `--ITSx_tax fungi,metazoa`).
+Accepted names: `alveolata`, `amoebozoa`, `bacillariophyta`, `bryophyta`, `chlorophyta`, `euglenozoa`, `eustigmatophyceae`,
+`fungi`, `haptophyceae`, `marchantiophyta`, `metazoa`, `oomycota`, `parabasalia`, `phaeophyceae`, `raphidophyceae`,
+`rhizaria`, `rhodophyta`, `synurophyceae`, `tracheophyta`.
 
-At the ITS extraction step of the pipeline, you can define a specific taxonomic group of interest. 
-ITSx employs hidden Markov models (HMMs) tailored for 20 eukaryotic taxonomic groups. 
-These models detect patterns in rRNA by recognizing variations commonly observed in multiple sequence alignments. 
-To select the taxon of interest, use the `--ITSx_tax` parameter. 
-You can input either single-character codes (e.g., `--ITSx_tax f`) or full names (e.g., `--ITSx_tax fungi`). 
-For multiple selections, provide a comma-separated string, such as `--ITSx_tax amoebozoa,rhizaria`. 
-For mixed-taxon datasets, there's an all-encompassing search option: `--ITSx_tax all` (which is enabled by default). 
-A table detailing all supported organism groups is provided below:  
+^2^: Reads are already oriented by the primers, so one strand is enough. If ITSx detects the ITS in few reads, try `T`.
 
-| Code | Full name         | Alternative name |
-| ---- | ----------------- | ---------------- |
-| `.`  | All               | all              |
-| `A`  | Alveolata         | alveolates       |
-| `B`  | Bryophyta         | mosses           |
-| `C`  | Bacillariophyta   | diatoms          |
-| `D`  | Amoebozoa         |                  |
-| `E`  | Euglenozoa        |                  |
-| `F`  | Fungi             |                  |
-| `G`  | Chlorophyta       | green-algae      |
-| `H`  | Rhodophyta        | red-algae        |
-| `I`  | Phaeophyceae      | brown-algae      |
-| `L`  | Marchantiophyta   | liverworts       |
-| `M`  | Metazoa           | animals          |
-| `O`  | Oomycota          | oomycetes        |
-| `P`  | Haptophyceae      | prymnesiophytes  |
-| `Q`  | Raphidophyceae    | raphidophytes    |
-| `R`  | Rhizaria          |                  |
-| `S`  | Synurophyceae     | synurids         |
-| `T`  | Tracheophyta      | higher-plants    |
-| `U`  | Eustigmatophyceae | eustigmatophytes |
-| `X`  | Apusozoa          |                  |
-| `Y`  | Parabasalia       | parabasalids     |
+### Long-chimera removal
 
-### Chimera identification
-
-| Parameter                       | Description                                                                      | Default Value |
-|---------------------------------|----------------------------------------------------------------------------------|---------------|
-| `--chimera_db`                  | Database for reference-based chimera removal (UDB)                               | -             |
-| `--chimera_rescueoccurrence`    | Min occurrence of chimeric sequences required to rescue them                     | 2             |
-| `--chimeranov_abskew`           | `abskew` parameter for de novo chimera identification                            | 2.0           |
-| `--chimeranov_dn`               | `dn` parameter for de novo chimera identification                                | 1.4           |
-| `--chimeranov_mindiffs`         | `mindiffs` parameter for de novo chimera identification                          | 3             |
-| `--chimeranov_mindiv`           | `mindiv` parameter for de novo chimera identification                            | 0.8           |
-| `--chimeranov_minh`             | `minh` parameter for de novo chimera identification                              | 0.28          |
-| `--chimeranov_xn`               | `xn` parameter for de novo chimera identification                                | 8.0           |
-
-NextITS employs a two-pronged strategy to detect chimeras:  
-
-1. ***De novo* Detection**:  
-  This algorithm identifies chimeras without relying on reference data. 
-  To mitigate the risk of false-positive detections, sequences flagged as chimeras by the *de novo* method are not discarded instantly. 
-  Instead, they're assigned a chimeric score. Filtering based on this score can be conducted in subsequent analysis stages (refer to Step-2 for more details).  
-
-2. **Reference-based Detection**:  
-  This method leverages a reference database in the UDB format.  
-  An example of such a database is accessible at: [https://owncloud.ut.ee/owncloud/s/iaQ3i862pjwYgdy](https://owncloud.ut.ee/owncloud/s/iaQ3i862pjwYgdy).  
-
-Furthermore, NextITS offers an option to "rescue" sequences mistakenly labeled as chimeras.  
-The pipeline checks if these sequences appear in other samples where they are not identified as chimeras. 
-If a sequence is consistently observed, it's more likely to be a genuine biological sequence. 
-You can control this functionality using the `--chimera_rescueoccurrence` parameter.  
-
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--long_chimera` | `false` | Remove sequences with rRNA genes in both orientations (inverted chimeras) or repeated rRNA regions (e.g., two copies of 5.8S). Runs after primer trimming. |
+| `--long_chimera_minbits` | `50` | Minimum bit score of an rRNA hit |
+| `--long_chimera_mincov` | `0.4` | Minimum fraction of the rRNA model covered by a hit |
 
 ### Homopolymer correction
 
-| Parameter         | Description                                               | Default Value |
-| ----------------- | --------------------------------------------------------- | ------------- |
-| `--hp`            | Enable or disable homopolymer correction                  | `true`        |
-| `--hp_similarity` | Allowed sequence similarity for homopolymer correction    | 0.999         |
-| `--hp_iddef`      | Sequence similarity definition for homopolymer correction | 2             |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--hp` | `true` | Correct homopolymer errors |
+| `--hp_similarity` | `0.999` | Similarity threshold for clustering homopolymer-compressed sequences (0.8–1) |
+| `--hp_iddef` | `2` | Sequence identity definition (VSEARCH `--iddef`, 0–4) |
 
-Although the PacBio HiFi reads are highly accurate, but they sometimes show errors in homopolymeric sites (e.g., `AAAAAAA` stretches). 
-These sites are also naturally prevalent in fungal ITS. 
-Such errors can lead to an inflated number of OTUs, slowing down clustering and reducing its efficiency. 
-To counteract this, NextITS has a strategy to correct these homopolymer errors. 
-For each sample, the dominant variant of the homopolymer sequence is retained and used.  
+PacBio HiFi reads are accurate, but most of their remaining errors are extra or missing bases in homopolymers,
+which are common in fungal ITS. These errors inflate the number of OTUs and slow down clustering.
+NextITS compresses homopolymers, clusters sequences that become identical,
+and keeps the most abundant original variant within each sample.
 
 <figure markdown>
-  ![Homopolymer correction](/assets/hp_correction.png.webp){ width="300" }
-  <figcaption>Homopolymer correction (n is the number of reads)</figcaption>
+  ![Homopolymer correction](assets/hp_correction.png.webp){ width="300" }
+  <figcaption>Homopolymer correction (n = number of reads)</figcaption>
 </figure>
 
-### Tag-jump Removal Parameters
+### Chimera detection
 
-| Parameter     | Description                                              | Default Value |
-| ------------- | -------------------------------------------------------- | ------------- |
-| `--tj_f`      | UNCROSS parameter `f` for tag-jump filtering             | 0.01          |
-| `--tj_p`      | Parameter `p` for tag-jump filtering                     | 1             |
-| `--otu_id`    | Sequence similarity for OTU clustering                   | 0.98          |
-| `--otu_iddef` | Sequence similarity definition for tag-jump removal step | 2             |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--chimera_methods` | `ref,denovo` | Methods to use: `ref`, `denovo`, `ref,denovo` or `none` |
+| `--chimera_db` | `Eukaryome_1.9.3_241222_FullITS_100-800.udb` | Reference database in UDB format ([download](installation.md#databases)) |
+| `--chimera_rescueoccurrence` | `2` | Rescue a reference-based chimera if it is found as non-chimeric in at least this many samples |
+| `--chimeranov_abskew` | `2.0` | *De novo* detection: `abskew` |
+| `--chimeranov_dn` | `1.4` | *De novo* detection: `dn` |
+| `--chimeranov_mindiffs` | `3` | *De novo* detection: `mindiffs` |
+| `--chimeranov_mindiv` | `0.8` | *De novo* detection: `mindiv` |
+| `--chimeranov_minh` | `0.28` | *De novo* detection: `minh` |
+| `--chimeranov_xn` | `8.0` | *De novo* detection: `xn` |
 
-Tag-jumps, sometimes referred to as index-switches or index cross-talk, are significant concerns in high-throughput sequencing (HTS) data 
-([Tedersoo et al. 2022 DOI:`10.1111/mec.16460`](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.16460)). 
-They can cause technical cross-contamination between samples, potentially distorting estimates of microbial community composition. 
-While careful sample indexing can mitigate this problem, a small percentage (approximately 0.01–0.1%) of these errors might persist in the data.  
+- **Reference-based** detection (VSEARCH `uchime_ref`) removes chimeras.
+  A sequence flagged as chimeric is rescued if it occurs as non-chimeric in other samples, because a real sequence is more likely than a repeated chimera.
+- **De novo** detection (VSEARCH `uchime_denovo`) only scores sequences in Step-1. Filtering by score happens in Step-2 (`--max_ChimeraScore`),
+  where data from all runs are available to recover false positives.
 
-NextITS provides a solution to evaluate index-switches using the 
-[UNCROSS2](https://drive5.com/usearch/manual/uncross_algo.html) algorithm 
-([Edgar 2018 DOI:`10.1101/400762`](https://www.biorxiv.org/content/10.1101/400762v1)), 
-which assigns an *ad hoc* score to measure the likelihood of tag-jump events.  
+### Tag-jump removal
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--tj` | `true` | Remove tag-jumps |
+| `--tj_f` | `0.01` | UNCROSS parameter `f`: expected rate of tag-jumps |
+| `--tj_p` | `1` | Power `p` in the UNCROSS score; values below 1 (e.g., `0.5`) make the score curve steeper |
+| `--tj_id` | `1` | Similarity for grouping sequences before scoring; `1` = identical sequences only, below `1` = pre-cluster at this similarity |
+| `--tj_iddef` | `2` | Sequence identity definition for pre-clustering (0–4) |
+
+Tag-jumps (also called index switching or cross-talk) assign reads to the wrong sample. Usually 0.01–0.1% of reads are affected
+([Tedersoo et al. 2022](https://doi.org/10.1111/mec.16460)).
+NextITS scores each occurrence with the [UNCROSS2](https://drive5.com/usearch/manual/uncross_algo.html) algorithm
+([Edgar 2018](https://doi.org/10.1101/400762)) and removes those likely to be tag-jumps.
 
 ## Step-2
 
-### Required parameters
+### Input and filtering
 
-| Parameter     | Description                                                     |
-| ------------- | --------------------------------------------------------------- |
-| `--data_path` | Input directory containing the results of Step-1                |
-| `--outdir`    | Path to the directory where the analysis results will be saved. |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--data_path` | `Step1_Results` | Folder with Step-1 results: one run, or a parent folder with one sub-folder per run |
+| `--merge_replicates` | `false` | Pool samples with the same `SampleID` across runs (requires `RunID__SampleID` names) |
+| `--max_ChimeraScore` | `0.6` | Remove sequences with a *de novo* chimera score above this value |
+| `--recover_denovochimeras` | `true` | Keep a *de novo* chimera if it occurs as non-chimeric in other samples |
+| `--max_MEEP` | `0.5` | Maximum expected errors per 100 bp for singletons ^1^ |
+| `--recover_lowqsingletons` | `true` | Keep a low-quality singleton if the same sequence occurs in other samples |
+| `--ampliconlen_min` | – | Minimum sequence length |
+| `--ampliconlen_max` | – | Maximum sequence length |
 
-### Denoising parameters (optional)
+^1^: MEEP is the expected number of errors as a percentage of sequence length; 0.5 corresponds to an average Phred score of about 23.
+Singletons with a higher MEEP are removed, unless rescued by `--recover_lowqsingletons`.
 
-| Parameter          | Description                             | Default Value |
-| ------------------ | --------------------------------------- | ------------- |
-| `--unoise`         | Perform denoising with UNOISE algorithm | `false`       |
-| `--unoise_alpha`   | `Alpha` parameter of UNOISE ^1^         | 2.0           |
-| `--unoise_minsize` | Minimum sequence abundance ^2^          | 8             |
+### Chunking
 
-The UNOISE algorithm ([Edgar, 2016, DOI:`10.1101/081257`](https://www.biorxiv.org/content/10.1101/081257v1)) 
-focuses on error-correction (or denoising) of amplicon reads. 
-Essentially, UNOISE operates on the principle that if a sequence with low abundance 
-closely resembles another sequence with high abundance, the former is probably an error. 
-This helps differentiate between true biological variation and sequencing errors.  
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--chunking_n` | – | Split the data into this many chunks of similar sequences (with MMseqs2) and process them in parallel; `2` or more enables it |
+| `--chunking_id` | `0.9` | Sequences at least this similar are placed in the same chunk |
 
-^1^:  
-    The `--unoise_alpha` option sets the alpha parameter, as described in the [UNOISE2 paper](https://www.biorxiv.org/content/10.1101/081257v1). 
-    Essentially, this parameter establishes the dissimilarity threshold between frequent and infrequent reads.  
+### Denoising and pre-clustering
 
-^2^:  
-    The `--unoise_minsize` option (which corresponds to the `-minsize` parameter in USEARCH), 
-    determines the minimum abundance a sequence must have across all samples. 
-    Any sequences with abundances below this threshold will be discarded, as sequences with very low abundances tend to be noisy.  
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--preclustering` | `none` | Method applied before clustering: `none`, `unoise`, `dada2`, `swarm_d1` or `homopolymer` |
 
-It's important to note that UNOISE was initially designed and optimized for Illumina data. 
-Because of indel errors stemming from inaccuracies in homopolymeric regions, 
-UNOISE might not work well with data that hasn't undergone homopolymer correction 
-(more details at the [USEARCH web-site](https://www.drive5.com/usearch/manual/faq_unoise_not_illumina.html)).  
-Therefore, when using UNOISE, ensure you activate both options by setting `--unoise true` and `--hp true` together.
+See [Denoising and clustering](usage.md#denoising-and-clustering) for how to choose a method.
 
+**UNOISE** ([Edgar 2016](https://doi.org/10.1101/081257)). A rare sequence that is very similar to an abundant one is treated as its error.
 
-### Sequence clustering
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--unoise_alpha` | `6.0` | Alpha parameter: how strongly abundance must differ for a similar sequence to be treated as an error |
+| `--unoise_minsize` | `1` | Minimum total abundance of a sequence |
 
-| Parameter              | Description                                   | Default Value |
-|------------------------|-----------------------------------------------|---------------|
-| `--clustering_method`  | Sequence clustering method                    | "vsearch"     |
+UNOISE was developed for Illumina reads. On PacBio data, use it only with homopolymer correction enabled in Step-1 (`--hp true`),
+otherwise indels in homopolymers are kept as real variants
+(see the [USEARCH manual](https://www.drive5.com/usearch/manual/faq_unoise_not_illumina.html)).
 
-Supported Methods:  
-- **vsearch**:  
-  This employs greedy clustering using a fixed sequence similarity threshold with 
-  [VSEARCH](https://github.com/torognes/vsearch/) 
-  ([Rognes et al., 2016, DOI:`10.7717/peerj.2584`](https://peerj.com/articles/2584/));  
-- **swarm**:  
-  Unlike "vsearch", this uses a dynamic sequence similarity threshold for clustering with 
-  [SWARM](https://github.com/torognes/swarm) 
-  ([Mahé et al., 2021, DOI:`10.1093/bioinformatics/btab493`](https://academic.oup.com/bioinformatics/article/38/1/267/6318385));  
-- **unoise**:  
-  This focuses solely on denoising to create zero-radius OTUs (zOTUs) 
-  based on the [UNOISE3](https://www.drive5.com/usearch/manual/unoise_algo.html) algorithm 
-  ([Edgar, 2016, DOI:`10.1101/081257`](https://www.biorxiv.org/content/10.1101/081257v1));  
-- **shmatching** (currently under development):  
-  This method clusters sequences based on species hypotheses (SH) as detailed in 
-  ([Kõljalg et al., 2013, DOI:`10.1111/mec.12481`](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.12481), 
-   [Abarenkov et al., 2022, DOI:`10.3897/biss.6.93856`](https://biss.pensoft.net/article/93856/)
-   );  
+**DADA2** ([Callahan et al. 2016](https://doi.org/10.1038/nmeth.3869)). Learns an error model from the data and infers exact sequence variants.
 
-#### VSEARCH clustering
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--dada2_engine` | `papa2` | Implementation: `papa2` (Python reimplementation) or `dada2` (original R package) |
+| `--dada2_error_estimation` | `shared` | With chunking: learn one error model from a subset of all chunks (`shared`) or one per chunk (`per_bucket`) |
+| `--dada2_nbases` | `5e8` | Number of bases used to learn the error model |
+| `--dada2_minsize` | `2` | Minimum abundance for denoising. Rarer sequences (and those with ambiguous bases) are mapped to the resulting ASVs afterwards. |
+| `--dada2_mapback_id` | `0.99` | Minimum similarity for mapping excluded sequences to ASVs |
+| `--dada2_mapback_unmapped` | `keep` | Excluded sequences that match no ASV: `keep` or `discard` |
+| `--dada2_bandsize` | `16` | Band size for alignment |
+| `--dada2_detectsingletons` | `true` | Allow ASVs supported by a single read |
+| `--dada2_omegaA` | `1e-20` | P-value threshold for forming a new ASV |
+| `--dada2_omegaC` | `1e-40` | P-value threshold for correcting a read |
+| `--dada2_omegaP` | `1e-4` | P-value threshold for prior-based ASVs |
+| `--dada2_maxconsist` | `10` | Maximum iterations of the self-consistency loop |
+| `--dada2_match` | `4` | Alignment match score |
+| `--dada2_mismatch` | `-5` | Alignment mismatch penalty |
+| `--dada2_gappenalty` | `-8` | Alignment gap penalty |
 
-| Parameter     | Description                                                         | Default Value |
-| ------------- | ------------------------------------------------------------------- | ------------- |
-| `--otu_id`    | Sequence similarity threshold                                       | 0.98          |
-| `--otu_iddef` | Sequence similarity definition (applied to UNOISE as well)          | 2             |
-| `--otu_qmask` | Method to mask low-complexity sequences (applied to UNOISE as well) | "dust"        |
+### Clustering
 
-#### SWARM clustering
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--clustering` | `vsearch` | Clustering method: `vsearch`, `swarm`, `optimotu` or `none` |
 
-| Parameter            | Description                                                   | Default Value |
-| -------------------- | ------------------------------------------------------------- | ------------- |
-| `--swarm_d`          | SWARM clustering resolution (`d`)                             | 1             |
-| `--swarm_fastidious` | Link nearby low-abundance swarms (`fastidious` option)        | `true`        |
-| `--swarm_d1boundary` | Minimal mass of large OTUs (only for `fastidious` with `d`=1) | 3             |
+**VSEARCH** ([Rognes et al. 2016](https://doi.org/10.7717/peerj.2584)). Greedy clustering at a fixed similarity threshold.
 
-### OTU table preparation, thresholds for singleton and *de novo* chimera removal
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--otu_id` | `0.98` | Similarity threshold |
+| `--otu_iddef` | `2` | Sequence identity definition (1–4); also used by UNOISE and DADA2 map-back |
+| `--otu_qmask` | `dust` | Masking of low-complexity regions |
+| `--vsearch_gapopen` | `20I/2E` | Gap opening penalties |
+| `--vsearch_gapext` | `2I/1E` | Gap extension penalties |
 
-| Parameter                  | Description                                                                | Default Value |
-| -------------------------- | -------------------------------------------------------------------------- | ------------- |
-| `--merge_replicates`       | Pool sample replicates (e.g., re-sequenced samples) in the final OTU table | `false`       |
-| `--max_MEEP`               | Maximum allowed number of expected errors per 100 bp                       | 0.5           |
-| `--max_ChimeraScore`       | Maximum allowed *de novo* chimera score                                    | 0.6           |
-| `--recover_lowqsingletons` | Logical, Recover *de novo* chimeras ^1^                                    | `true`        |
-| `--recover_denovochimeras` | Logical, Recover singletons ^2^                                            | `true`        |
+**SWARM** ([Mahé et al. 2022](https://doi.org/10.1093/bioinformatics/btab493)). Clusters grow by linking sequences that differ by at most `d` positions, with no global threshold.
 
-^1^:
-    Do-novo chimera recovery:  
-    if a sequence identified as putative chimera was observed in the other samples, 
-    where there is no evidence that it is chimeric, it will be recovered.
-
-^2^:
-    Singleton recovery:  
-    if a within-sequencing run singleton sequence with relatively low quality (based on MEEP) 
-    was observed in the other samples, it will be recovered.
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--swarm_d` | `1` | Maximum number of differences between linked sequences |
+| `--swarm_fastidious` | `true` | Attach small clusters to large ones nearby (only with `d = 1`) |
+| `--swarm_d1boundary` | `3` | Minimum abundance of a "large" cluster in fastidious mode |
 
 
-### Post-clustering curation with LULU
+### Post-clustering curation (LULU)
 
-| Parameter          | Description                            | Default Value |
-| ------------------ | -------------------------------------- | ------------- |
-| `--lulu`           | Run LULU                               | true          |
-| `--lulu_match`     | Minimum similarity threshold           | 95.0          |
-| `--lulu_ratio`     | Minimum abundance ratio                | 1.0           |
-| `--lulu_ratiotype` | Abundance ratio type - "min" or "avg"  | "min"         |
-| `--lulu_relcooc`   | Relative co-occurrence                 | 0.95          |
-| `--lulu_maxhits`   | Maximum number of hits (0 = unlimited) | 0             |
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--lulu` | `true` | Run post-clustering curation |
+| `--lulu_match` | `97.0` | Minimum similarity (%) between an OTU and its potential parent |
+| `--lulu_ratio` | `1.0` | Minimum abundance ratio between parent and daughter OTU |
+| `--lulu_ratiotype` | `min` | Abundance ratio type: `min` or `avg` |
+| `--lulu_relcooc` | `0.95` | Fraction of the daughter's samples in which the parent must also occur |
+| `--lulu_maxhits` | `0` | Maximum number of potential parents to consider; `0` = unlimited |
 
-**Please Note:** The default value for `--lulu_match` 
-in NextITS is set to a 95% similarity threshold. 
-This differs from the original LULU paper, where the default threshold is 84%.
+LULU ([Frøslev et al. 2017](https://doi.org/10.1038/s41467-017-01312-x)) merges an OTU into a more abundant, similar OTU
+that occurs in nearly all of the same samples. Such an OTU is most likely an error variant of that parent.
+NextITS uses [MUMU](https://github.com/frederic-mahe/mumu), a fast C++ implementation of LULU.
+The default `--lulu_match` of 97% is stricter than the 84% of the original LULU.
 
-## Miscellaneous parameters
+### rRNA parts
 
-| Parameter            | Description                                              | Default Value |
-| -------------------- | -------------------------------------------------------- | ------------- |
-| `--gzip_compression` | Compression level for GZIP ^1^                           | 7             |
-| `--storagemode`      | Adjusts how files are directed to the results folder ^2^ | "symlink"     |
-
-^1^:  
-    To save disk space and potentially enhance data reading speed, 
-    NextITS compresses data using gzip. 
-    Adjust the balance between speed and compression ratio with the `--gzip_compression` parameter. 
-    Where `-1` is the fastest option (worst compression), and `-9` is slowest (best compression).  
-
-^2^:  
-    In the default setup, files are directed to the results folder (`--output`) 
-    using symbolic links (or symlinks) which help save disk space. 
-    Each symlink points to the actual file located in the process working directory. 
-    This behavior can be modified using the `--storagemode` parameter.  
-    Refer to the table below for a complete list of available storage mode options.  
-
-| Storage mode | Description                                              |
-| ------------ | -------------------------------------------------------- |
-| `symlink`    | Creates a symbolic link to the file                      |
-| `copy`       | Copies the file to the target directory                  |
-| `move`       | Moves the file to the target directory (not recommended) |
-| `rellink`    | Creates a relative symbolic link to the file             |
-| `link`       | Creates a hard link to the file                          |
-
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `--rrna_parts` | `true` | Export the rRNA regions (SSU, ITS1, 5.8S, ITS2, LSU) and full-length sequences of OTU representatives. Requires `--ITSx_to_parquet true` in Step-1. |
