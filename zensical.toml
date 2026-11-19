@@ -6,6 +6,7 @@ copyright = "Copyright © 2026 Vladimir Mikryukov. All rights reserved."
 
 site_url = "https://Next-ITS.github.io/"
 repo_url = "https://github.com/vmikk/NextITS"
+repo_name = "vmikk/NextITS"
 
 extra_css = ["stylesheets/extra.css"]
 
