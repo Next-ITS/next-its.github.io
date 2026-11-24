@@ -79,6 +79,16 @@ accent = "indigo"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
 
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/vmikk/NextITS"
+name = "NextITS on GitHub"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/docker"
+link = "https://hub.docker.com/r/vmikk/nextits"
+name = "NextITS container on Docker Hub"
+
 
 [project.plugins.glightbox]
 auto_caption = false
