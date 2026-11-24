@@ -39,6 +39,7 @@ logo = "assets/NextITS_logo.webp"
 font.text = "Ubuntu"
 font.code = "Ubuntu Mono"
 features = [
+  "content.action.copy",
   "content.code.annotate",
   "content.code.copy",
   "content.footnote.tooltips",
