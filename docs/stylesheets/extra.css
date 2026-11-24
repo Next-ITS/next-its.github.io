@@ -30,18 +30,84 @@
   .nx-hero__tagline { font-size: 0.95rem; }
 }
 
-/* ---------- Feature cards ---------- */
-.md-typeset .grid.cards > ul > li,
-.md-typeset .grid > .card {
-  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+/* Secondary links under the hero buttons */
+.md-typeset .nx-links {
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
 }
-.md-typeset .grid.cards > ul > li:hover,
-.md-typeset .grid > .card:hover {
-  transform: translateY(-2px);
+.md-typeset .nx-links a {
+  color: var(--md-default-fg-color--light);
 }
-.md-typeset .grid.cards .twemoji.lg,
-.md-typeset .grid.cards .lg svg {
+.md-typeset .nx-links a:hover { color: var(--md-accent-fg-color); }
+.md-typeset .nx-links a + a::before {
+  content: "·";
+  display: inline-block;   /* keeps the dot out of the link underline */
+  margin: 0 0.6rem;
+  color: var(--md-default-fg-color--lighter);
+}
+
+/* ---------- Highlights ---------- */
+.md-typeset .nx-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.6rem 2rem;
+  margin: 0 0 2.8rem;
+}
+.md-typeset .nx-features > div {
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  padding-top: 0.8rem;
+}
+.md-typeset .nx-features p.nx-features__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--md-default-fg-color);
+}
+.md-typeset .nx-features p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ---------- Two-step workflow ---------- */
+.md-typeset .nx-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+}
+.md-typeset .nx-steps > div > p { margin: 0 0 0.8rem; }
+.md-typeset .nx-steps__label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--md-accent-fg-color);
+}
+.md-typeset .nx-steps .nx-figure { margin: 0; }
+.md-typeset .nx-steps .nx-figure img {
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* ---------- Citation ---------- */
+.md-typeset .nx-cite {
+  border-left: 2px solid var(--md-accent-fg-color);
+  background: var(--md-code-bg-color);
+  padding: 0.8rem 1rem;
+  border-radius: 0 0.3rem 0.3rem 0;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.md-typeset .nx-cite p { margin: 0; }
+
+@media screen and (max-width: 76.1875em) {
+  .md-typeset .nx-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media screen and (max-width: 44.9375em) {
+  .md-typeset .nx-features,
+  .md-typeset .nx-steps { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------- Tables ---------- */
