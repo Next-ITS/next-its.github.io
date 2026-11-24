@@ -1,75 +1,129 @@
 ---
-title: HPC
+title: Running on HPC
 description: >-
-    Learn how to use NextITS on HPC cluster.
+    Run NextITS on an HPC cluster with Slurm or another job scheduler.
 ---
 
-# Usage on HPC cluster
+# Running on HPC
 
-NextITS leverages the capabilities of the [Nextflow](https://www.nextflow.io/) workflow manager, 
-designed to maximize the efficiency and flexibility of your analyses by fully utilizing available computational resources. 
-This means that you can seamlessly deploy the pipeline on high-performance computing (HPC) clusters, 
-making it especially beneficial for large-scale datasets.  
+Nextflow supports most HPC schedulers, including [Slurm](https://slurm.schedmd.com/), PBS/Torque, SGE and LSF,
+so NextITS runs on a university cluster without changes to the pipeline.
+This page uses Slurm in its examples. If you don't know which scheduler your cluster uses, ask your HPC support team.
 
-Nextflow is compatible with all major [job schedulers](https://en.wikipedia.org/wiki/Job_scheduler), including 
-[Slurm](https://slurm.schedmd.com/documentation.html), 
-[OpenPBS](https://www.openpbs.org/), 
-[TORQUE](https://adaptivecomputing.com/cherry-services/torque-resource-manager/), 
-and [Apache Ignite](https://ignite.apache.org/), 
-to name a few. 
-In the upcoming section, we'll guide you through the process of setting up and initiating NextITS on a cluster environment, 
-like your University's computing cluster.  
+Most clusters provide Singularity or Apptainer rather than Docker, so use `-profile singularity` or `-profile apptainer`.
+Set the image cache to a shared folder, so the image is downloaded and converted only once:
 
-!!! info "Tips for optimizing pipeline performance on HPC clusters"
-    For an in-depth exploration, including details on specific workload manager features, please refer to  
-    [https://www.nextflow.io/blog/2023/best-practices-deploying-pipelines-with-hpc-workload-managers.html](https://www.nextflow.io/blog/2023/best-practices-deploying-pipelines-with-hpc-workload-managers.html).  
+```bash
+export NXF_SINGULARITY_CACHEDIR="$HOME/singularity_cache"   # or NXF_APPTAINER_CACHEDIR
+```
 
-## Usage scenarios
+## Two ways to run
 
-Three potential usage scenarios are:  
+**Single job.** You request one node (or part of one) and run the whole pipeline inside that job.
+Nextflow runs all tasks locally on the allocated CPUs.
+This is the simplest setup and works well for most datasets.
 
-- **Simple Mode**:  
-    This scenario involves a single, self-contained job. 
-    Here, Nextflow initiates all tasks on the same computing node it operates on. 
-    The total amount of requested resources is cumulatively allocated to all tasks.  
+**Scheduler mode.** Nextflow runs as a small, long-lived job and submits each task as a separate Slurm job with its own resources.
+Use it for very large datasets, or when a single node is not enough.
+The run takes longer when the queue is busy.
 
-- **Cluster Mode**:  
-    In this scenario, Nextflow operates on a computing node, using a long-duration task with low resource allocation. 
-    From this node, it begins dispatching separate jobs (e.g., using Slurm). 
-    It's important to configure individual resource requirements for each job in this scenario, as they are autonomous of each other. 
-    This mode is ideal for handling extensive datasets. 
-    However, the turnaround time might increase based on the cluster's activity, since each task might have to wait its turn in the queue. 
-    Despite this, the mode offers heightened flexibility because it allows for precise resource allocation and scaling based on the demands of individual tasks.  
-    For a clearer understanding of this scenario, consider the following illustration:  
-    ![The anatomy of an HPC cluster](https://github.com/nextflow-io/website/blob/master/assets/img/nextflow-on-big-iron-twelve-tips-for-improving-the-effectiveness-of-pipelines-on-hpc-clusters-1.jpg?raw=true)  
-    (Image source: [https://www.nextflow.io/blog/2023/best-practices-deploying-pipelines-with-hpc-workload-managers.html](https://www.nextflow.io/blog/2023/best-practices-deploying-pipelines-with-hpc-workload-managers.html)).  
+!!! info "Further reading"
+    [Best practices for deploying pipelines with HPC workload managers](https://www.nextflow.io/blog/2023/best-practices-deploying-pipelines-with-hpc-workload-managers.html)
+    on the Nextflow blog.
 
-- **Hybrid Workload**:  
-    This versatile scenario integrates various resources (local/HPC/cloud). 
-    Specific tasks, depending on their requirements, might be delegated to another infrastructure boasting superior hardware. 
-    For instance, a sequence clustering task might be resource-intensive but can efficiently use multiple CPUs. 
-    Such a task can be dispatched to a cloud service (e.g., AWS Batch), and once processed, 
-    the results can be retrieved and the pipeline can continue executing other tasks using the primary executor. 
-    This approach taps into the best of both worlds by using specialized resources for demanding tasks and local or primary resources for regular tasks.  
+## Single job
 
+Request the resources in the batch script, and tell Nextflow not to give any single task more than that.
+Nextflow's `resourceLimits` does this:
 
-In this guide, we'll concentrate on the **simple scenario**, 
-ideal for managing medium-to-large-sized datasets and aligning with the needs of most users. 
-We'll primarily focus on configurations and commands tailored for **Slurm**, 
-given its popularity in academic institutions. 
-If you're uncertain about the workload manager employed on your HPC, please reach out to your IT department.  
+```groovy title="limits.config"
+process.resourceLimits = [ cpus: 32, memory: 128.GB, time: 48.h ]
+```
 
-## Resource requirements
+```bash title="nextits_step1.sh"
+#!/bin/bash
+#SBATCH --job-name=NextITS_S1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
+#SBATCH --time=48:00:00
 
-When initiating a job on a cluster, consider specifying these resource requirements:
+module load apptainer          # if needed; name depends on your cluster
+export NXF_APPTAINER_CACHEDIR="$HOME/apptainer_cache"
+export NXF_OPTS="-Xms1g -Xmx4g"  # memory for Nextflow itself
 
-- **CPUs**: The required number of processor cores for the task.  
-- **Memory**: Different processes might have distinct RAM needs. For instance, sequence clustering often demands more memory.  
-- **Time**: The maximum duration allowed for the pipeline to run.  
+nextflow run vmikk/NextITS -r main \
+  -profile apptainer \
+  -c limits.config \
+  -resume \
+  --step       Step1 \
+  --input      "$PWD/Input/Run01/Run01.fastq.gz" \
+  --barcodes   "$PWD/Input/Run01/Run01_barcodes.fasta" \
+  --chimera_db "$PWD/DB/Eukaryome_1.9.3_241222_FullITS_100-800.udb" \
+  --outdir     "$PWD/Step1_Results/Run01"
+```
 
-The HPC scheduler utilizes these details to allocate your task to a suitable computing node. 
-Determining the right resources often varies based on the dataset's size. 
-Additionally, your system may have some restrictions based on its HPC policies. 
-Overallocating can lead to underutilized resources, longer wait times, and reduced cluster efficiency for other users. 
-Conversely, underallocating risks task failures.
+```bash
+sbatch nextits_step1.sh
+```
 
+!!! tip "The `hpc` profile"
+    The default settings suit a workstation. On a large node, `-profile hpc,apptainer` gives the heavy steps
+    (demultiplexing, ITS extraction, clustering) more CPUs. Combine it with `limits.config` so that no task asks for more than your allocation.
+
+## Scheduler mode
+
+Create a config file that sets the executor and the resources of individual processes.
+The values below are a starting point; adjust them to your data and your cluster's limits.
+
+```groovy title="slurm.config"
+executor {
+    name            = 'slurm'
+    queueSize       = 100          // max jobs in the queue at once
+    submitRateLimit = '10 sec'     // be gentle with the scheduler
+}
+
+process {
+    clusterOptions = '--partition=main'   // partition, account, etc.
+
+    // defaults for all processes
+    cpus   = 1
+    memory = 4.GB
+    time   = 4.h
+
+    // retry tasks that ran out of memory or time
+    errorStrategy = { task.exitStatus in [137,140,143] ? 'retry' : 'finish' }
+    maxRetries    = 2
+
+    // heavy steps
+    withName: '(S1|seqstats):demux'               { cpus = 12; memory = 8.GB  }
+    withName: 'S1:ITS_EXTRACTION:itsx'            { cpus = 16; memory = 16.GB }
+    withName: 'S1:CHIMERA_REMOVAL:chimera_ref'    { cpus = 8;  memory = 8.GB  }
+    withName: 'S2:dereplication'                  { cpus = 8;  memory = 32.GB }
+    withName: 'S2:CLUSTERING:cluster_vsearch'     { cpus = 32; memory = 64.GB; time = 24.h }
+    withName: 'S2:CLUSTERING:cluster_swarm'       { cpus = 32; memory = 64.GB; time = 24.h }
+    withName: 'S2:lulu'                           { cpus = 16; memory = 32.GB }
+}
+```
+
+Then start Nextflow itself as a small, long-running job:
+
+```bash
+sbatch --cpus-per-task=2 --mem=8G --time=7-00:00:00 --wrap \
+  "nextflow run vmikk/NextITS -r main -profile apptainer -c slurm.config -resume --step Step2 --data_path $PWD/Step1_Results --outdir $PWD/Step2_Results"
+```
+
+The work directory (`-work-dir`, default `./work`) must be on a file system that all compute nodes can access.
+
+`-profile hpc_utslurm` is the configuration we use on the University of Tartu cluster.
+You can use [its config file](https://github.com/vmikk/NextITS/blob/main/conf/hpc_utslurm.config)
+as a template: it lists resources for every process.
+
+## Choosing resources
+
+- **Run a pilot.** Process a few typical samples first, then look at `pipeline_info/execution_report_*.html`.
+  It shows the CPU, memory and time each process actually used.
+- **Heavy steps.** ITS extraction (ITSx) takes most of the time in Step-1.
+  In Step-2, clustering and dereplication of large pooled datasets need the most memory.
+- **Large Step-2 datasets.** Use `--chunking_n` to split the data and cluster the chunks in parallel. Each task then needs less memory.
+- **Don't over-request.** Asking for more than the job needs makes it wait longer in the queue and takes resources from other users.
+- **Clean up.** The work directory can grow large. Once you have the results, copy them (see [Where results are stored](usage.md#where-results-are-stored)) and delete `work/`.
