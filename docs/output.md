@@ -19,7 +19,7 @@ Some folders appear only when the step that creates them is enabled; this is not
     - `08_RunSummary/Step1_report.html`: interactive report with read counts at every step, per sample and per run
     - `07_SeqTable/Seqs.parquet`: the final sequence table, which is the input to Step-2
 
-??? abstract "Folder structure"
+???+ abstract "Folder structure"
 
     ```
     Step1_Results/Run01/
@@ -74,7 +74,7 @@ Some folders appear only when the step that creates them is enabled; this is not
     - `05.LULU/OTU_table_LULU.txt.gz` and `05.LULU/OTUs_LULU.fa.gz`: the final OTU table and OTU sequences, after LULU curation
     - `04.PooledResults/`: the same before LULU (and the final results when `--lulu false`)
 
-??? abstract "Folder structure"
+???+ abstract "Folder structure"
 
     ```
     Step2_Results/
