@@ -10,9 +10,11 @@ repo_name = "vmikk/NextITS"
 
 extra_css = ["stylesheets/extra.css"]
 
-# CorelDRAW source files for figures (not published)
+# CorelDRAW source files for figures (not published);
+# the agent skill is shown on agents.md via snippets and downloaded from GitHub
 exclude_docs = """
 *.cdr
+/agents/nextits/
 """
 
 nav = [
@@ -30,6 +32,7 @@ nav = [
     { "Parameters" = "parameters.md" },
     { "Changelog" = "https://github.com/vmikk/NextITS/blob/main/CHANGELOG.md" },
   ] },
+  { "AI agents" = "agents.md" },
 ]
 
 [project.theme]
@@ -89,6 +92,20 @@ icon = "fontawesome/brands/docker"
 link = "https://hub.docker.com/r/vmikk/nextits"
 name = "NextITS container on Docker Hub"
 
+# llms.txt, llms-full.txt and a Markdown copy of each page, for AI agents
+[project.plugins.llmstxt]
+full_output = "llms-full.txt"
+markdown_description = """
+NextITS runs in two steps: Step1 processes each sequencing run separately,
+Step2 pools the Step1 results and clusters them into OTUs.
+An agent skill for NextITS is described on the AI agents page.
+"""
+
+[project.plugins.llmstxt.sections]
+"Getting started" = ["index.md", "installation.md", "quickstart.md"]
+"User guide" = ["usage.md", "output.md", "HPC.md"]
+"Reference" = ["parameters.md"]
+"AI agents" = ["agents.md"]
 
 [project.plugins.glightbox]
 auto_caption = false
@@ -110,7 +127,7 @@ pymdownx.highlight.pygments_lang_class = true
 pymdownx.inlinehilite = {}
 pymdownx.keys = {}
 pymdownx.mark = {}
-pymdownx.snippets = {}
+pymdownx.snippets.check_paths = true
 pymdownx.tabbed.alternate_style = true
 pymdownx.tabbed.combine_header_slug = true
 pymdownx.tasklist.custom_checkbox = true
